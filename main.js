@@ -2,12 +2,12 @@ const TARGET_URL = "https://mr_studio.deno.dev";
 
 // محدودیت‌ها
 const LIMITS = {
-  monthlyBandwidthMB: 5000,    // 5 گیگ در ماه
-  requestsPerMinute: 60,        // حداکثر 60 درخواست در دقیقه
-  maxRequestSizeMB: 10          // حداکثر حجم هر درخواست 10 مگابایت
+  monthlyBandwidthMB: 5000,
+  requestsPerMinute: 60,
+  maxRequestSizeMB: 10
 };
 
-// ذخیره آمار (ساده)
+// ذخیره آمار
 let stats = {
   totalRequests: 0,
   totalBytesOut: 0,
@@ -37,10 +37,8 @@ function isBandwidthExceeded(bytes) {
 }
 
 async function handleRequest(request) {
-  // شمارش درخواست
   stats.totalRequests++;
   
-  // بررسی محدودیت دقیقه‌ای
   if (isRateLimited()) {
     stats.blockedRequests++;
     return new Response("Too Many Requests - Limit: 60 per minute", { 
@@ -51,7 +49,6 @@ async function handleRequest(request) {
   
   const url = new URL(request.url);
   
-  // بررسی حجم درخواست ورودی
   const contentLength = request.headers.get("content-length");
   if (contentLength && parseInt(contentLength) > LIMITS.maxRequestSizeMB * 1024 * 1024) {
     stats.blockedRequests++;
@@ -72,11 +69,9 @@ async function handleRequest(request) {
     
     const response = await fetch(newRequest);
     
-    // محاسبه حجم پاسخ
     const responseClone = response.clone();
     const responseSize = (await responseClone.arrayBuffer()).byteLength;
     
-    // بررسی محدودیت حجم ماهانه
     if (isBandwidthExceeded(responseSize)) {
       stats.blockedRequests++;
       return new Response("Monthly bandwidth limit exceeded (5GB)", { 
@@ -85,10 +80,8 @@ async function handleRequest(request) {
       });
     }
     
-    // به‌روزرسانی آمار
     stats.totalBytesOut += responseSize;
     
-    // اضافه کردن هدر آمار (اختیاری)
     const newHeaders = new Headers(response.headers);
     newHeaders.set("X-Proxy-Stats", `Requests: ${stats.totalRequests}, Bandwidth: ${Math.round(stats.totalBytesOut / (1024 * 1024))}MB`);
     
@@ -106,7 +99,6 @@ async function handleRequest(request) {
   }
 }
 
-// مسیر آمار (اختیاری - فقط با ?stats)
 async function handleStats(request) {
   const url = new URL(request.url);
   if (url.searchParams.get("stats") === "true") {
@@ -131,7 +123,6 @@ async function handleStats(request) {
   });
 }
 
-// هندلر اصلی
 async function mainHandler(request) {
   const url = new URL(request.url);
   
